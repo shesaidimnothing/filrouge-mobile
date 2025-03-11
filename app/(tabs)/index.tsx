@@ -1,74 +1,227 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Platform, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 
-import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { AnnonceCard } from '@/components/AnnonceCard';
+import { adService, Annonce } from '@/constants/ApiService';
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const [recentAnnonces, setRecentAnnonces] = useState<Annonce[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Charger les annonces au montage du composant
+    loadRecentAnnonces();
+  }, []);
+
+  const loadRecentAnnonces = async () => {
+    try {
+      setLoading(true);
+      const data = await adService.getAllAds();
+      // Trier les annonces par date (les plus récentes d'abord) et prendre les 5 premières
+      const sortedAnnonces = [...data].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ).slice(0, 5);
+      setRecentAnnonces(sortedAnnonces);
+    } catch (error) {
+      console.error('Erreur lors du chargement des annonces récentes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: '#f5f5f5', dark: '#1D3D47' }}
       headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
+        <ThemedView style={styles.headerContainer}>
+          <ThemedText type="title" style={styles.headerTitle}>Projet Fil Rouge</ThemedText>
+        </ThemedView>
       }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
+      <ThemedView style={styles.container}>
+        {/* Bouton Déposer une annonce */}
+        <TouchableOpacity 
+          style={styles.depositButton}
+          onPress={() => router.push('/deposer-annonce')}
+        >
+          <ThemedText style={styles.depositButtonText}>Déposer une annonce</ThemedText>
+        </TouchableOpacity>
+
+        {/* Section "C'est le moment de vendre" */}
+        <ThemedView style={styles.sellSection}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>C'est le moment de vendre</ThemedText>
+          <TouchableOpacity 
+            style={styles.depositButton}
+            onPress={() => router.push('/deposer-annonce')}
+          >
+            <ThemedText style={styles.depositButtonText}>Déposer une annonce</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
+        {/* Section "Tendance en ce moment" */}
+        <ThemedView style={styles.trendingSection}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>Tendance en ce moment</ThemedText>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
+            <TouchableOpacity style={styles.categoryCard} onPress={() => router.push('/categorie/cadeaux')}>
+              <ThemedText style={styles.categoryText}>Idées cadeaux</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.categoryCard} onPress={() => router.push('/categorie/sportifs')}>
+              <ThemedText style={styles.categoryText}>Équipements sportifs</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.categoryCard} onPress={() => router.push('/categorie/tech')}>
+              <ThemedText style={styles.categoryText}>High-Tech</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.categoryCard} onPress={() => router.push('/categorie/maison')}>
+              <ThemedText style={styles.categoryText}>Maison</ThemedText>
+            </TouchableOpacity>
+          </ScrollView>
+        </ThemedView>
+
+        {/* Section "Top catégories" */}
+        <ThemedView style={styles.topCategoriesSection}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>Top catégories</ThemedText>
+          
+          <TouchableOpacity style={styles.categoryLargeCard} onPress={() => router.push('/categorie/vetements')}>
+            <ThemedText style={styles.categoryLargeText}>Vêtements</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
+        {/* Section "Annonces récentes" */}
+        <ThemedView style={styles.recentSection}>
+          <ThemedView style={styles.sectionHeader}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>Annonces récentes</ThemedText>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/annonces')}>
+              <ThemedText style={styles.viewAllText}>Voir tout</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+          
+          {loading ? (
+            <ThemedView style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#000" />
+              <ThemedText style={styles.loadingText}>Chargement des annonces...</ThemedText>
+            </ThemedView>
+          ) : recentAnnonces.length === 0 ? (
+            <ThemedText style={styles.emptyText}>Aucune annonce pour le moment</ThemedText>
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.recentAnnoncesScroll}
+            >
+              {recentAnnonces.map((annonce) => (
+                <AnnonceCard key={annonce.id.toString()} annonce={annonce} horizontal={true} />
+              ))}
+            </ScrollView>
+          )}
+        </ThemedView>
       </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    padding: 16,
+    gap: 24,
+  },
+  headerContainer: {
+    height: 60,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    width: '100%',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  depositButton: {
+    backgroundColor: '#000',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
   },
+  depositButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  sellSection: {
+    backgroundColor: '#f0f0f0',
+    padding: 16,
+    borderRadius: 8,
+    gap: 16,
+  },
+  trendingSection: {
+    gap: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  categoriesScroll: {
+    flexDirection: 'row',
+  },
+  categoryCard: {
+    backgroundColor: '#e0e0e0',
+    padding: 16,
+    borderRadius: 8,
+    marginRight: 12,
+    minWidth: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryText: {
+    fontWeight: '600',
+  },
+  topCategoriesSection: {
+    gap: 16,
+  },
+  categoryLargeCard: {
+    backgroundColor: '#e0e0e0',
+    padding: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryLargeText: {
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  recentSection: {
+    gap: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  viewAllText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  recentAnnoncesScroll: {
+    flexDirection: 'row',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyText: {
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 16,
+  }
 });
