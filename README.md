@@ -33,7 +33,6 @@ When you're ready, run:
 npm run reset-project
 ```
 
-premiere version mobile, annonces qui marchent mais peut pas poster, comptes qui marchent pas
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
