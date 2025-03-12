@@ -83,13 +83,12 @@ export default function DeposerAnnonceScreen() {
       }
       
       // Création de l'annonce
-      const newAnnonce = await adService.createAd({
+      const newAnnonce = await adService.addAd({
         title,
         description,
         price: priceNumber,
         category,
-        userId: currentUser.id,
-        imageUrl
+        image: imageUrl
       });
 
       if (newAnnonce) {

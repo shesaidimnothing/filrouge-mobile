@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 
 // Initialiser Express
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -26,6 +26,11 @@ app.use('/api/messages', messageRoutes);
 // Route de base
 app.get('/', (req, res) => {
   res.json({ message: 'Bienvenue sur l\'API Projet Fil Rouge' });
+});
+
+// Route de santé pour vérifier si l'API est disponible
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK' });
 });
 
 // Démarrer le serveur

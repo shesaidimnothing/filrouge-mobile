@@ -16,11 +16,17 @@ export default function AdminScreen() {
   const [annonces, setAnnonces] = useState<Annonce[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ id: number, email: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     checkUserLoggedIn();
-    loadAnnonces();
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadAnnonces();
+    }
+  }, [currentUser]);
 
   const checkUserLoggedIn = async () => {
     try {
@@ -28,16 +34,23 @@ export default function AdminScreen() {
       if (userJson) {
         const user = JSON.parse(userJson);
         setCurrentUser(user);
+        
         // Vérifier si l'utilisateur est admin (email admin@example.com)
-        if (user.email !== 'admin@example.com') {
-          Alert.alert('Accès refusé', 'Vous n\'avez pas les droits d\'administration');
-          router.replace('/(tabs)');
+        const isUserAdmin = user.email === 'admin@example.com';
+        setIsAdmin(isUserAdmin);
+        
+        if (!isUserAdmin) {
+          Alert.alert(
+            'Accès limité',
+            'Vous n\'êtes pas administrateur. Vous ne pourrez voir et supprimer que vos propres annonces.',
+            [{ text: 'OK' }]
+          );
         }
       } else {
         // Rediriger vers la page de connexion si l'utilisateur n'est pas connecté
         Alert.alert(
           'Connexion requise',
-          'Vous devez être connecté en tant qu\'administrateur pour accéder à cette page',
+          'Vous devez être connecté pour accéder à cette page',
           [
             {
               text: 'Se connecter',
@@ -54,7 +67,18 @@ export default function AdminScreen() {
   const loadAnnonces = async () => {
     try {
       setLoading(true);
-      const data = await adService.getAllAds();
+      let data;
+      
+      if (isAdmin) {
+        // L'admin peut voir toutes les annonces
+        data = await adService.getAllAds();
+      } else if (currentUser) {
+        // Les utilisateurs normaux ne peuvent voir que leurs propres annonces
+        data = await adService.getUserAds(currentUser.id);
+      } else {
+        data = [];
+      }
+      
       setAnnonces(data);
     } catch (error) {
       console.error('Erreur lors du chargement des annonces:', error);
@@ -74,7 +98,13 @@ export default function AdminScreen() {
   };
 
   // Fonction pour supprimer une annonce
-  const handleDeleteAnnonce = async (id: number) => {
+  const handleDeleteAnnonce = async (id: number, userId: number) => {
+    // Vérifier si l'utilisateur a le droit de supprimer cette annonce
+    if (!isAdmin && currentUser && userId !== currentUser.id) {
+      Alert.alert('Accès refusé', 'Vous ne pouvez pas supprimer les annonces des autres utilisateurs');
+      return;
+    }
+    
     Alert.alert(
       "Confirmation",
       "Êtes-vous sûr de vouloir supprimer cette annonce ?",
@@ -110,8 +140,13 @@ export default function AdminScreen() {
     );
   };
 
-  // Fonction pour supprimer toutes les annonces
+  // Fonction pour supprimer toutes les annonces (admin uniquement)
   const handleDeleteAllAnnonces = async () => {
+    if (!isAdmin) {
+      Alert.alert('Accès refusé', 'Seul l\'administrateur peut supprimer toutes les annonces');
+      return;
+    }
+    
     Alert.alert(
       "Confirmation",
       "Êtes-vous sûr de vouloir supprimer TOUTES les annonces ? Cette action est irréversible.",
@@ -155,11 +190,16 @@ export default function AdminScreen() {
         <ThemedText>{item.price} €</ThemedText>
         <ThemedView style={styles.annonceDetails}>
           <ThemedText style={styles.annonceCategory}>{item.category}</ThemedText>
+          {item.user && (
+            <ThemedText style={styles.annonceUser}>
+              Par: {item.user.name}
+            </ThemedText>
+          )}
         </ThemedView>
       </ThemedView>
       <TouchableOpacity 
         style={styles.deleteButton}
-        onPress={() => handleDeleteAnnonce(item.id)}
+        onPress={() => handleDeleteAnnonce(item.id, item.userId)}
         disabled={loading}
       >
         <ThemedText style={styles.deleteButtonText}>Supprimer</ThemedText>
@@ -179,15 +219,19 @@ export default function AdminScreen() {
         </TouchableOpacity>
       </ThemedView>
 
-      <ThemedText type="subtitle" style={styles.sectionTitle}>Gestion des annonces</ThemedText>
+      <ThemedText type="subtitle" style={styles.sectionTitle}>
+        {isAdmin ? 'Gestion des annonces (Admin)' : 'Mes annonces'}
+      </ThemedText>
       
-      <TouchableOpacity 
-        style={styles.deleteAllButton}
-        onPress={handleDeleteAllAnnonces}
-        disabled={loading || annonces.length === 0}
-      >
-        <ThemedText style={styles.deleteAllButtonText}>Supprimer toutes les annonces</ThemedText>
-      </TouchableOpacity>
+      {isAdmin && (
+        <TouchableOpacity 
+          style={styles.deleteAllButton}
+          onPress={handleDeleteAllAnnonces}
+          disabled={loading || annonces.length === 0}
+        >
+          <ThemedText style={styles.deleteAllButtonText}>Supprimer toutes les annonces</ThemedText>
+        </TouchableOpacity>
+      )}
       
       {loading ? (
         <ThemedView style={styles.loadingContainer}>
@@ -282,6 +326,11 @@ const styles = StyleSheet.create({
   annonceCategory: {
     fontSize: 12,
     color: '#666',
+  },
+  annonceUser: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
   deleteButton: {
     backgroundColor: '#ff3b30',

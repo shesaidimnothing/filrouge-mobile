@@ -18,11 +18,13 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      const result = await userService.login(email, password);
+      console.log('Tentative de connexion avec:', email, password);
+      const user = await userService.login(email, password);
       
-      if (result && result.user) {
+      if (user) {
         // Stocker les informations de l'utilisateur
-        await AsyncStorage.setItem('currentUser', JSON.stringify(result.user));
+        await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+        console.log('Utilisateur connecté:', user);
         router.replace('/(tabs)');
       } else {
         Alert.alert('Erreur', 'Identifiants incorrects');
